@@ -38,7 +38,7 @@ func (handler *Handler) getAvailableBooks(c *gin.Context){
 		return
 	}
 
-	c.JSON(http.StatusInternalServerError, types.Response{
+	c.JSON(http.StatusOK, types.Response{
 		Status:  http.StatusOK,
 		Error:   false,
 		Data:    books,
@@ -82,7 +82,7 @@ func (handler *Handler) borrowBook(c *gin.Context){
 		return
 	}
 
-	c.JSON(http.StatusInternalServerError, types.Response{
+	c.JSON(http.StatusOK, types.Response{
 		Status:  http.StatusOK,
 		Error:   false,
 		Data:    book,
@@ -115,7 +115,7 @@ func (handler *Handler) returnBook(c *gin.Context){
 		return
 	}
 
-	c.JSON(http.StatusInternalServerError, types.Response{
+	c.JSON(http.StatusOK, types.Response{
 		Status:  http.StatusOK,
 		Error:   false,
 		Data:    book,

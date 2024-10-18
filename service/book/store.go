@@ -129,13 +129,34 @@ func (s *Store) ReturnBook(bookId int, userId int) (*types.Book, error){
 // 	err = tx.Commit()
 
 func borrowBook(s *Store, book types.Book, userId int) error {
-	_, err := s.database.Exec("INSERT INTO borrows (book_id, user_id) VALUES ($1, $2)", 
-	book.Id, userId)
 
-	if err != nil{
-		return err
+
+	var borrowed types.Borrow
+	errCheck := s.database.QueryRow("SELECT id, borrowed_quantity FROM borrows WHERE user_id = $1 AND book_id = $2 AND returned_at IS NULL", 
+	userId, book.Id).Scan(&borrowed.Id, &borrowed.BorrowedQuantity)
+
+	if errCheck != nil {
+		if errCheck == sql.ErrNoRows {
+			_, err := s.database.Exec("INSERT INTO borrows (book_id, user_id, borrowed_quantity) VALUES ($1, $2, $3)", 
+	book.Id, userId, 1)
+
+			if err != nil{
+				return err
+			}
+		}else{
+			return errCheck
+		}
 	}
 
+	
+	var quantity = borrowed.BorrowedQuantity + 1
+	_, errUpdateBor := s.database.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE id = $2", 
+	quantity, borrowed.Id)
+
+	if errUpdateBor != nil{
+		return errUpdateBor
+	}
+	
 	var newQuantity = book.Quantity - 1
 	_, errUpdate := s.database.Exec("UPDATE books SET quantity = $1 WHERE id = $2", newQuantity, book.Id)
 
@@ -147,25 +168,28 @@ func borrowBook(s *Store, book types.Book, userId int) error {
 
 func bookReturn(s *Store, book types.Book, userId int) error {
 
-	var borrowCountButNotReturned int
-	errCount := s.database.QueryRow("SELECT COUNT(id) FROM borrows WHERE book_id = $1 AND user_id = $2 AND returned_at IS NULL", book.Id, userId).Scan(&borrowCountButNotReturned)
+	var borrowedQuantity int
+	errCount := s.database.QueryRow("SELECT borrowed_quantity FROM borrows WHERE book_id = $1 AND user_id = $2 AND returned_at IS NULL", 
+	book.Id, userId).Scan(&borrowedQuantity)
 
 	if errCount != nil{
 		return errCount
 	}
 
-	if borrowCountButNotReturned == 0 {
+	if borrowedQuantity == 0 {
 		return errors.New("error: book is not borrowed u can not return it")
 	}
 
 
-	_, err := s.database.Exec("UPDATE borrows SET returned_at = $1 WHERE book_id = $2 AND user_id = $3", 
-	time.Now(), 
-	book.Id, 
-	userId)
+	if(borrowedQuantity == 1){
+		_, err := s.database.Exec("UPDATE borrows SET returned_at = $1 AND borrowed_quantity = 0 AND WHERE book_id = $2 AND user_id = $3", 
+		time.Now(), 
+		book.Id, 
+		userId)
 
-	if err != nil{
-		return err
+		if err != nil{
+			return err
+		}
 	}
 
 	var newQuantity = book.Quantity + 1

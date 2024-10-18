@@ -20,11 +20,11 @@ var Envs = initConfig()
 func initConfig() Config {
 	godotenv.Load()
 	return Config{
-		Host: getEnv("DB_HOST", "http://localhost"),
-		Port: getEnv("DB_PORT", "8080"),
-		User: getEnv("DB_USER", "admin"),
+		Host: getEnv("DB_HOST", "127.0.0.1"),
+		Port: getEnv("DB_PORT", "5423"),
+		User: getEnv("DB_USER", "user"),
 		Password: getEnv("DB_PASSWORD", "password"),
-		DBName: getEnv("DB_NAME", "bookstore"),
+		DBName: getEnv("DB_NAME", "postgres"),
 	}
 }
 

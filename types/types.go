@@ -30,9 +30,10 @@ type Book struct {
 }
 
 type Borrow struct {
-	Id int `json:"id"`
+	Id *int `json:"id"`
 	UserId int `json:"user_id"`
 	BookId int `json:"book_id"`
+	BorrowedQuantity int `json:"borrowed_quantity"`
 	BorrowedAt time.Time `json:"borrowed_at"`
 	ReturnedAt *time.Time `json:"returned_at"`
 }
