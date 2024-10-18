@@ -1,12 +1,10 @@
 package user
 
 import (
-	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/martin0b101/book-rental-api/types"
-	"github.com/martin0b101/book-rental-api/utils"
 )
 
 type Handler struct {
@@ -17,39 +15,61 @@ func NewHandler(store types.UserStore) *Handler{
 	return &Handler{store: store}
 }
 
-func (handler *Handler) RegisterRoutes(router *mux.Router){
-	router.HandleFunc("/register", handler.registerUser).Methods("POST")
-	router.HandleFunc("/users", handler.getUsers).Methods("GET")
+func (handler *Handler) RegisterRoutes(router *gin.Engine){
+	router.POST("/register", handler.registerUser)
+	router.GET("/users", handler.getUsers)
 }
 
-func (handler *Handler) registerUser(writer http.ResponseWriter, request *http.Request){
+func (handler *Handler) registerUser(c *gin.Context){
 
-	var payload types.User
-	if err := utils.ParseJSON(request, payload); err != nil {
+	var registerRequest types.RegisterUserRequest
 
-	}	
+	err := c.BindJSON(&registerRequest)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, types.Response{
+			Status:  http.StatusBadRequest,
+			Error:   true,
+			Message: err.Error(),
+			Data:    nil,
+		})
+		return
+	}
 
+	user, errCreate := handler.store.CreateUser(registerRequest)
+	if errCreate != nil{
+		c.JSON(http.StatusInternalServerError, types.Response{
+			Status:  http.StatusInternalServerError,
+			Error:   true,
+			Message: errCreate.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, types.Response{
+		Status: http.StatusOK,
+		Error: false,
+		Data: user,
+	})
 }
 
-func (handler *Handler) getUsers(writer http.ResponseWriter, request *http.Request){
+func (handler *Handler) getUsers(c *gin.Context){
 
 	users, err := handler.store.GetUsers()
 
 	if err != nil{
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, types.Response{
+			Status:  http.StatusInternalServerError,
+			Error:   true,
+			Message: err.Error(),
+			Data:    nil,
+		})
+		return
 	}
 
-	jsonResponse, jsonError := json.Marshal(types.Response{
-		Status: http.StatusOK,
-		Error: false,
-		Data: users,
+	c.JSON(http.StatusOK, types.Response{
+		Status:  http.StatusOK,
+		Error:   false,
+		Data:    users,
 	})
-
-	if jsonError != nil{
-		http.Error(writer, jsonError.Error(), http.StatusInternalServerError)
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	writer.Write(jsonResponse)
 }

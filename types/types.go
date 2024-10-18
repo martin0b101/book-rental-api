@@ -1,12 +1,14 @@
 package types
 
-import "time"
+import (
+	"errors"
+	"time"
 
-
+)
 
 type UserStore interface {
 	GetUsers() ([]User, error)
-	CreateUser(User) (error)
+	CreateUser(RegisterUserRequest) (*User, error)
 }
 
 type BookStore interface {
@@ -31,25 +33,29 @@ type Borrow struct {
 	Id int `json:"id"`
 	UserId int `json:"user_id"`
 	BookId int `json:"book_id"`
-	BorrowedAt time.Time `json:borrowed_at`
-	ReturnedAt *time.Time `json:returned_at`
+	BorrowedAt time.Time `json:"borrowed_at"`
+	ReturnedAt *time.Time `json:"returned_at"`
 }
 
-// type RegisterUser struct {
-// 	FirstName string `json:"firstName"`
-// 	LastName string `json:"lastName"`
-// }
 
 type BookActionRequest struct {
 	BookId int `json:"book_id"`
 	UserId int `json:"user_id"`
 }
 
+type RegisterUserRequest struct{
+	FirstName string `json:"first_name"`
+	LastName string `json:"last_name"`
+}
 
 
 type Response struct {
 	Status int `json:"status"`
 	Error bool `json:"error"`
-	Message *string `json:"message"`
+	Message string `json:"message"`
 	Data interface{} `json:"data"`
 }
+
+
+// Errors
+var NotFoundError = errors.New("Not found")

@@ -14,7 +14,7 @@ type Store struct {
 	database *sql.DB
 }
 
-func NewBookStore(database *sql.DB) *Store {
+func NewStore(database *sql.DB) *Store {
 	return &Store{database: database}
 }
 
@@ -52,7 +52,7 @@ func (s *Store) BorrowBook(bookId int, userId int) (*types.Book, error) {
 
 	if err != nil {
 			if err == sql.ErrNoRows {
-				return nil, errors.New("book not found")
+				return nil, types.NotFoundError
 			}
 			return nil, err
 		}
@@ -67,6 +67,8 @@ func (s *Store) BorrowBook(bookId int, userId int) (*types.Book, error) {
 	if errBorowing != nil{
 		return nil, errBorowing
 	}
+
+	book.Quantity = book.Quantity - 1
 
 	return &book, nil
 }
@@ -88,11 +90,13 @@ func (s *Store) ReturnBook(bookId int, userId int) (*types.Book, error){
 	}
 
 
-	errReturn := bookReturn(s, book, userId)
+	errReturn := bookReturn(s, book, userId) 
 
 	if errReturn != nil{
 		return nil, errReturn
 	}
+
+	book.Quantity = book.Quantity + 1
 
 	return &book, nil
 }
