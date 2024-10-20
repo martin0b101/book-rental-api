@@ -4,3 +4,6 @@ docker run --name book-postgres \
   -e POSTGRES_DB=books \
   -p 5432:5432 \
   -d postgres
+
+
+  docker run --name redis-bookstore -p 7379:6379 -d redis

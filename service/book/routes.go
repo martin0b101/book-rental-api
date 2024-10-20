@@ -21,8 +21,6 @@ func (handler *Handler) RegisterRoutes(router *gin.Engine){
 	router.GET("/books", handler.getAvailableBooks)
 	router.POST("/book/borrow", handler.borrowBook)
 	router.POST("/book/return", handler.returnBook)
-
-
 }
 
 func (handler *Handler) getAvailableBooks(c *gin.Context){

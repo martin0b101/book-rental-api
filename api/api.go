@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/martin0b101/book-rental-api/service/book"
 	"github.com/martin0b101/book-rental-api/service/user"
@@ -27,8 +28,6 @@ func (s *ApiServer) Run() error {
 
 	// register user store 
 	userStore := user.NewStore(s.database)
-
-	// register user routes, inject to handler store.
 	userHandler := user.NewHandler(userStore)
 	userHandler.RegisterRoutes(router)
 

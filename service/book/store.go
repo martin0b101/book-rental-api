@@ -40,7 +40,6 @@ func (s *Store) GetAvailableBooks() ([]types.Book, error) {
 
 func (s *Store) BorrowBook(bookId int, userId int) (*types.Book, error) {
 
-	// book, err := getBookById(s, bookId)
 	var book types.Book
 	err := s.database.QueryRow("SELECT id, title, quantity FROM books WHERE id = $1", 
 	bookId).Scan(&book.Id,
@@ -98,45 +97,26 @@ func (s *Store) ReturnBook(bookId int, userId int) (*types.Book, error){
 }
 
 
-// func getBookById(s *Store, bookId int) (*types.Book, error){
-	
-// 	rows, err := s.database.Query("SELECT id, title, quantity FROM books WHERE id = $1", 1)
-// 	if err != nil{
-// 		return nil, err
-// 	}
-
-// 	var book *types.Book
-// 	errScan := rows.Scan(
-// 		&book.Id,
-// 		&book.Title,
-// 		&book.Quantity,
-// 	)
-// 	if errScan != nil{
-// 		return nil, err
-// 	}
-
-// 	return book, nil
-// }
-
-// create transaction for this.
-// tx := db.MustBegin()
-// 	tx.MustExec("INSERT INTO borrows (user_id, book_id) VALUES ($1, $2)", borrow.UserID, borrow.BookID)
-// 	tx.MustExec("UPDATE books SET quantity = quantity - 1 WHERE id = $1", borrow.BookID)
-// 	err = tx.Commit()
-
 func borrowBook(s *Store, book types.Book, userId int) error {
-
 
 	var borrowed types.Borrow
 	errCheck := s.database.QueryRow("SELECT id, borrowed_quantity FROM borrows WHERE user_id = $1 AND book_id = $2 AND returned_at IS NULL", 
 	userId, book.Id).Scan(&borrowed.Id, &borrowed.BorrowedQuantity)
 
+	// Start a transaction
+	tx, err := s.database.Begin()
+
+	if err != nil {
+		return err
+	}
+
 	if errCheck != nil {
 		if errCheck == sql.ErrNoRows {
-			_, err := s.database.Exec("INSERT INTO borrows (book_id, user_id, borrowed_quantity) VALUES ($1, $2, $3)", 
-	book.Id, userId, 1)
-
+			_, err := tx.Exec("INSERT INTO borrows (book_id, user_id, borrowed_quantity) VALUES ($1, $2, $3)", 
+			book.Id, userId, 1)
+			
 			if err != nil{
+				tx.Rollback()
 				return err
 			}
 		}else{
@@ -145,18 +125,27 @@ func borrowBook(s *Store, book types.Book, userId int) error {
 	}
 
 	var quantity = borrowed.BorrowedQuantity + 1
-	_, errUpdateBor := s.database.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE id = $2", 
+ 
+	_, errUpdateBor := tx.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE id = $2", 
 	quantity, borrowed.Id)
 
 	if errUpdateBor != nil{
+		tx.Rollback()
 		return errUpdateBor
 	}
 	
 	var newQuantity = book.Quantity - 1
-	_, errUpdate := s.database.Exec("UPDATE books SET quantity = $1 WHERE id = $2", newQuantity, book.Id)
+
+	_, errUpdate := tx.Exec("UPDATE books SET quantity = $1 WHERE id = $2", newQuantity, book.Id)
 
 	if errUpdate != nil{
+		tx.Rollback()
 		return errUpdate
+	}
+
+	// Commit the transaction
+	if err = tx.Commit(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -167,6 +156,7 @@ func bookReturn(s *Store, book types.Book, userId int) error {
 	errCount := s.database.QueryRow("SELECT borrowed_quantity FROM borrows WHERE book_id = $1 AND user_id = $2 AND returned_at IS NULL", 
 	book.Id, userId).Scan(&borrowedQuantity)
 
+
 	if errCount != nil{
 		if errCount == sql.ErrNoRows {
 			return errors.New("error: book is not borrowed u can not return it")
@@ -175,29 +165,43 @@ func bookReturn(s *Store, book types.Book, userId int) error {
 		}
 	}
 
+
+	tx, err := s.database.Begin()
+	if err != nil {
+		return nil
+	}
+
 	if(borrowedQuantity == 1){
-		_, err := s.database.Exec("UPDATE borrows SET returned_at = NOW(), borrowed_quantity = 0 WHERE book_id = $1 AND user_id = $2", 
+		_, err := tx.Exec("UPDATE borrows SET returned_at = NOW(), borrowed_quantity = 0 WHERE book_id = $1 AND user_id = $2", 
 		book.Id, 
 		userId)
 
 		if err != nil{
+			tx.Rollback()
 			return err
 		}
 	}
 
 	var newBorrowedQuant = borrowedQuantity - 1;
-	_, errUpdateBor := s.database.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE book_id = $2 AND user_id = $3", 
+
+	_, errUpdateBor := tx.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE book_id = $2 AND user_id = $3", 
 	newBorrowedQuant, book.Id, userId)
 
 	if errUpdateBor != nil{
+		tx.Rollback()
 		return errUpdateBor
 	}
 
 	var newQuantity = book.Quantity + 1
-	_, errUpdate := s.database.Exec("UPDATE books SET quantity = $1 WHERE id = $2", newQuantity, book.Id)
+	_, errUpdate := tx.Exec("UPDATE books SET quantity = $1 WHERE id = $2", newQuantity, book.Id)
 
 	if errUpdate != nil{
+		tx.Rollback()
 		return errUpdate
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
 	}
 
 

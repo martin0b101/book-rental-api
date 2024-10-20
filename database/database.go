@@ -20,8 +20,6 @@ func NewPostgresSQLStorage(config config.Config) (*sql.DB, error) {
 		log.Fatal(err)
 	}
 
-
-	
 	// Test the connection
 	err = db.Ping()
 	if err != nil {
