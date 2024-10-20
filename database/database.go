@@ -20,11 +20,13 @@ func NewPostgresSQLStorage(config config.Config) (*sql.DB, error) {
 		log.Fatal(err)
 	}
 
+
+	
 	// Test the connection
-	// err = db.Ping()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to ping PostgreSQL: %v", err)
-	// }
-	// log.Println("Successfully connected to PostgreSQL")
+	err = db.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("failed to ping PostgreSQL: %v", err)
+	}
+	log.Println("Successfully connected to PostgreSQL")
 	return db, nil
 }

@@ -3,11 +3,8 @@ package book
 import (
 	"database/sql"
 	"errors"
-	"time"
-
 	"github.com/martin0b101/book-rental-api/types"
 )
-
 
 
 type Store struct {
@@ -73,7 +70,7 @@ func (s *Store) BorrowBook(bookId int, userId int) (*types.Book, error) {
 	return &book, nil
 }
 
-// u return quantity that is before borrowing
+
 func (s *Store) ReturnBook(bookId int, userId int) (*types.Book, error){
 
 	var book types.Book
@@ -88,7 +85,6 @@ func (s *Store) ReturnBook(bookId int, userId int) (*types.Book, error){
 		}
 		return nil, err
 	}
-
 
 	errReturn := bookReturn(s, book, userId) 
 
@@ -148,7 +144,6 @@ func borrowBook(s *Store, book types.Book, userId int) error {
 		}
 	}
 
-	
 	var quantity = borrowed.BorrowedQuantity + 1
 	_, errUpdateBor := s.database.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE id = $2", 
 	quantity, borrowed.Id)
@@ -173,17 +168,15 @@ func bookReturn(s *Store, book types.Book, userId int) error {
 	book.Id, userId).Scan(&borrowedQuantity)
 
 	if errCount != nil{
-		return errCount
+		if errCount == sql.ErrNoRows {
+			return errors.New("error: book is not borrowed u can not return it")
+		}else{
+			return errCount
+		}
 	}
-
-	if borrowedQuantity == 0 {
-		return errors.New("error: book is not borrowed u can not return it")
-	}
-
 
 	if(borrowedQuantity == 1){
-		_, err := s.database.Exec("UPDATE borrows SET returned_at = $1 AND borrowed_quantity = 0 AND WHERE book_id = $2 AND user_id = $3", 
-		time.Now(), 
+		_, err := s.database.Exec("UPDATE borrows SET returned_at = NOW(), borrowed_quantity = 0 WHERE book_id = $1 AND user_id = $2", 
 		book.Id, 
 		userId)
 
@@ -192,12 +185,21 @@ func bookReturn(s *Store, book types.Book, userId int) error {
 		}
 	}
 
+	var newBorrowedQuant = borrowedQuantity - 1;
+	_, errUpdateBor := s.database.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE book_id = $2 AND user_id = $3", 
+	newBorrowedQuant, book.Id, userId)
+
+	if errUpdateBor != nil{
+		return errUpdateBor
+	}
+
 	var newQuantity = book.Quantity + 1
 	_, errUpdate := s.database.Exec("UPDATE books SET quantity = $1 WHERE id = $2", newQuantity, book.Id)
 
 	if errUpdate != nil{
 		return errUpdate
 	}
+
 
 	return nil
 }     

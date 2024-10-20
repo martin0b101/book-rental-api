@@ -5,7 +5,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds PostgreSQL configuration details
 type Config struct {
 	Host     string
 	Port     string
@@ -28,7 +27,7 @@ func initConfig() Config {
 	}
 }
 
-func getEnv(key, fallback string) string {
+func getEnv(key string, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}

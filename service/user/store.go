@@ -2,7 +2,6 @@ package user
 
 import (
 	"database/sql"
-
 	"github.com/martin0b101/book-rental-api/types"
 )
 
@@ -38,15 +37,11 @@ func (s *Store) GetUsers() ([]types.User, error) {
 
 func (s *Store) CreateUser(user types.RegisterUserRequest) (*types.User, error) {
 
-	// _, err := s.database.Exec("INSERT INTO users (first_name, last_name) VALUES ($1, $2)", 
-	// user.FirstName, user.LastName)
-
 	var userRegistered types.User
-	// The INSERT query with the RETURNING clause
+
 	query := `INSERT INTO users (first_name, last_name) 
 	          VALUES ($1, $2) RETURNING id, first_name, last_name`
 
-	// Use QueryRow to execute the query and return the inserted row
 	err := s.database.QueryRow(query, user.FirstName, user.LastName).
 		Scan(&userRegistered.Id, &userRegistered.FirstName, &userRegistered.LastName)
 
