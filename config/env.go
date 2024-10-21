@@ -11,6 +11,7 @@ type Config struct {
 	User     string
 	Password string
 	DBName   string
+	RedisAddress string
 }
 
 // singleton
@@ -24,6 +25,7 @@ func initConfig() Config {
 		User: getEnv("DB_USER", "user"),
 		Password: getEnv("DB_PASSWORD", "password"),
 		DBName: getEnv("DB_NAME", "postgres"),
+		RedisAddress: getEnv("REDIS_ADDRESS", "localhost:6379"),
 	}
 }
 

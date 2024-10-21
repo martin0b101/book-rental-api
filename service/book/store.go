@@ -38,62 +38,45 @@ func (s *Store) GetAvailableBooks() ([]types.Book, error) {
 }
 
 
-func (s *Store) BorrowBook(bookId int, userId int) (*types.Book, error) {
+func (s *Store) BorrowBook(bookId int, userId int) error {
 
-	var book types.Book
-	err := s.database.QueryRow("SELECT id, title, quantity FROM books WHERE id = $1", 
-	bookId).Scan(&book.Id,
-		&book.Title,
-		&book.Quantity,)
+	book, err := getBookById(s, bookId)
 
-	if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, types.NotFoundError
-			}
-			return nil, err
-		}
-
-	
-	if book.Quantity < 1 {
-		return nil, errors.New("book is not available to borrow")
+	if err != nil{
+		return err
 	}
 
-	errBorowing := borrowBook(s, book, userId)
+	if book.Quantity < 1 {
+		return errors.New("book is not available to borrow")
+	}
+
+	errBorowing := borrowBook(s, *book, userId)
 
 	if errBorowing != nil{
-		return nil, errBorowing
+		return errBorowing
 	}
 
-	book.Quantity = book.Quantity - 1
-
-	return &book, nil
+	return nil
 }
 
 
-func (s *Store) ReturnBook(bookId int, userId int) (*types.Book, error){
+func (s *Store) ReturnBook(bookId int, userId int) error{
 
-	var book types.Book
-	err := s.database.QueryRow("SELECT id, title, quantity FROM books WHERE id = $1", 
-	bookId).Scan(&book.Id,
-		&book.Title,
-		&book.Quantity,)
+	book, err := getBookById(s, bookId)
 
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("book not found")
-		}
-		return nil, err
+	if err != nil{
+		return err
 	}
 
-	errReturn := bookReturn(s, book, userId) 
+	errReturn := bookReturn(s, *book, userId) 
 
 	if errReturn != nil{
-		return nil, errReturn
+		return errReturn
 	}
 
-	book.Quantity = book.Quantity + 1
+	//book.Quantity = book.Quantity + 1
 
-	return &book, nil
+	return nil
 }
 
 
@@ -112,6 +95,7 @@ func borrowBook(s *Store, book types.Book, userId int) error {
 
 	if errCheck != nil {
 		if errCheck == sql.ErrNoRows {
+
 			_, err := tx.Exec("INSERT INTO borrows (book_id, user_id, borrowed_quantity) VALUES ($1, $2, $3)", 
 			book.Id, userId, 1)
 			
@@ -147,6 +131,7 @@ func borrowBook(s *Store, book types.Book, userId int) error {
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -168,11 +153,11 @@ func bookReturn(s *Store, book types.Book, userId int) error {
 
 	tx, err := s.database.Begin()
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if(borrowedQuantity == 1){
-		_, err := tx.Exec("UPDATE borrows SET returned_at = NOW(), borrowed_quantity = 0 WHERE book_id = $1 AND user_id = $2", 
+	if borrowedQuantity == 1{
+		_, err := tx.Exec("DELETE FROM borrows WHERE book_id = $1 AND user_id = $2", 
 		book.Id, 
 		userId)
 
@@ -186,7 +171,7 @@ func bookReturn(s *Store, book types.Book, userId int) error {
 
 	_, errUpdateBor := tx.Exec("UPDATE borrows SET borrowed_quantity = $1 WHERE book_id = $2 AND user_id = $3", 
 	newBorrowedQuant, book.Id, userId)
-
+	
 	if errUpdateBor != nil{
 		tx.Rollback()
 		return errUpdateBor
@@ -204,6 +189,22 @@ func bookReturn(s *Store, book types.Book, userId int) error {
 		return err
 	}
 
-
 	return nil
 }     
+
+
+func getBookById(s *Store, bookId int) (*types.Book, error){
+	var book types.Book
+	err := s.database.QueryRow("SELECT id, title, quantity FROM books WHERE id = $1", 
+	bookId).Scan(&book.Id,
+		&book.Title,
+		&book.Quantity,)
+
+	if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, types.NotFoundError
+			}
+			return nil, err
+		}
+	return &book, nil
+}

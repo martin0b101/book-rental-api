@@ -1,17 +1,15 @@
 package utils
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
+	"context"
+	"log"
+
+	"github.com/redis/go-redis/v9"
 )
 
-func ParseJSON(request *http.Request, payload any) error {
-	if request.Body == nil{
-		fmt.Println("missing payload")
+func DeleteFromRedis(context context.Context, cache *redis.Client, key string) {
+	err := cache.Del(context, key).Err()
+	if err != nil{
+		log.Printf("Error: deleting redis %s", err.Error())
 	}
-	return json.NewDecoder(request.Body).Decode(payload)
 }
-
-
-// func WriteJSON(writer http.ResponseWriter, )

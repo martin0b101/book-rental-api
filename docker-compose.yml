@@ -1,0 +1,32 @@
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: book-postgres-new
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-bookstore-new
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+# Define the volumes used by the services
+volumes:
+  postgres_data:
+
+# Define the networks used by the services
+networks:
+  app-network:
+    driver: bridge

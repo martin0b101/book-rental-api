@@ -3,7 +3,6 @@ package types
 import (
 	"errors"
 	"time"
-
 )
 
 type UserStore interface {
@@ -13,8 +12,8 @@ type UserStore interface {
 
 type BookStore interface {
 	GetAvailableBooks() ([]Book, error)
-	BorrowBook(bookId int, userId int) (*Book, error)
-	ReturnBook(bookId int, userId int) (*Book, error)
+	BorrowBook(bookId int, userId int) error
+	ReturnBook(bookId int, userId int) error
 }
 
 type User struct {
@@ -30,14 +29,13 @@ type Book struct {
 }
 
 type Borrow struct {
-	Id *int `json:"id"`
+	Id int `json:"id"`
 	UserId int `json:"user_id"`
 	BookId int `json:"book_id"`
 	BorrowedQuantity int `json:"borrowed_quantity"`
 	BorrowedAt time.Time `json:"borrowed_at"`
 	ReturnedAt *time.Time `json:"returned_at"`
 }
-
 
 type BookActionRequest struct {
 	BookId int `json:"book_id"`
