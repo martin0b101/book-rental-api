@@ -40,6 +40,12 @@ Check if postgres and redis are running and then open code in code editor and co
 make migrate-up
 ```
 
+To delete tables run:
+
+```
+make migrate-down
+```
+
 # Run App
 
 To run app copy code below:
