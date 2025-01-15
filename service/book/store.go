@@ -40,6 +40,12 @@ func (s *Store) GetAvailableBooks() ([]types.Book, error) {
 
 func (s *Store) BorrowBook(bookId int, userId int) error {
 
+	_, err := getUserById(s, userId);
+
+	if err != nil {
+		return err;
+	}
+
 	book, err := getBookById(s, bookId)
 
 	if err != nil{
@@ -61,6 +67,12 @@ func (s *Store) BorrowBook(bookId int, userId int) error {
 
 
 func (s *Store) ReturnBook(bookId int, userId int) error{
+
+	_, err := getUserById(s, userId);
+
+	if err != nil {
+		return err;
+	}
 
 	book, err := getBookById(s, bookId)
 
@@ -207,4 +219,19 @@ func getBookById(s *Store, bookId int) (*types.Book, error){
 			return nil, err
 		}
 	return &book, nil
+}
+
+func getUserById(s *Store, userId int) (*int, error){
+	var id int
+	err := s.database.QueryRow("SELECT id FROM users WHERE id = $1", 
+	userId).Scan(&id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, types.NotFoundError
+		}
+		return nil, err
+	}
+	return &id, nil
+	
 }
